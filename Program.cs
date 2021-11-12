@@ -17,7 +17,8 @@ namespace PagerDutyInterview
         {
             SetupHttpClient();
             //await RetrieveAbilities();
-            await RetrieveLogEntries();
+            //await RetrieveLogEntries();
+            await RetrieverUsers(0);
         }
 
         private static async Task RetrieveAbilities()
@@ -40,6 +41,36 @@ namespace PagerDutyInterview
             foreach (LogEntry logEntry in response.Entries)
             {
                 Console.WriteLine($"Id {logEntry.Id}: {logEntry.Summary}");
+            }
+        }
+
+        private static async Task RetrieverUsers(int offset)
+        {
+            // todo real pagination stuff
+            var streamTask = client.GetStreamAsync(@"https://api.pagerduty.com/users?include%5B%5D=contact_methods&total=true&limit=99999");
+            var response = await JsonSerializer.DeserializeAsync<UsersResponse>(await streamTask);
+
+            var menu = 1;
+            foreach (DataClasses.User user in response.Users)
+            {
+                Console.WriteLine($"{menu}: {user.Name} {user.Email}");
+                menu += 1;
+            }
+
+            Console.WriteLine();
+            Console.Write("Enter number for contact lookup: ");
+            var selectionText = Console.ReadLine();
+            var selection = int.Parse(selectionText);
+            if (selection < 1 || selection > response.Users.Count)
+            {
+                throw new ArgumentOutOfRangeException("nope");
+            }
+
+            var selectedUser = response.Users[selection - 1];
+            Console.WriteLine($"Details for {selectedUser.Name}:");
+            foreach (DataClasses.User.ContactMethod contactMethod in selectedUser.ContactMethods)
+            {
+                Console.WriteLine($"  {contactMethod.Type}: {contactMethod.Address}");
             }
         }
 
